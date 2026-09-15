@@ -28,6 +28,7 @@
 class TNtupleD;
 class Point;
 class Geodetic;
+class TProfile;
 
 class PiDA : public CObject
 {
@@ -77,6 +78,10 @@ public:
     static const unsigned int kVerboseMax      = 0x8000;
  
 private:
+    // Number of time bins
+    const   uint32_t kSecPerDay = 86400;
+    const   uint32_t kNTimeBin  = 288;
+
 
     bool fRun;
 
@@ -90,6 +95,7 @@ private:
      */
     TFile       *fRootFile;
     TNtupleD    *fNtuple;        // Output
+    TProfile    *fProfile;
 
     /*! 
      * Configuration file name. 

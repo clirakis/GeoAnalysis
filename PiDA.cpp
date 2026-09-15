@@ -32,6 +32,7 @@ using namespace libconfig;
 
 #include "TFile.h"
 #include "TNtupleD.h"
+#include "TProfile.h"
 
 
 /// Local Includes.
@@ -149,7 +150,7 @@ PiDA::~PiDA(void)
 
     /* close ntuple */
 
-
+    fProfile->Write("ABSMAG");
     fRootFile->Write();
     fRootFile->Close();
     delete fRootFile;
@@ -198,7 +199,13 @@ void PiDA::Do(void)
     const double *var;
     double Lat, Lon;
     // Make this big. 
-    double *NewVar = new double[NVar+5];
+    double *NewVar = new double[NVar+7];
+    uint32_t iMx = f5InputFile->IndexFromName("Mx");
+    uint32_t iMy = f5InputFile->IndexFromName("My");
+    uint32_t iMz = f5InputFile->IndexFromName("Mz");
+    uint32_t iUTC = f5InputFile->IndexFromName("UTC");
+    double Mx,My,Mz;
+    double Working;
 
 
     size_t N    = f5InputFile->NEntries();
@@ -221,6 +228,19 @@ void PiDA::Do(void)
 	    NewVar[NVar+2] = fXY.Y();
 	    NewVar[NVar+3] = fXY.X() - fGeodetic->XY0().X();
 	    NewVar[NVar+4] = fXY.Y() - fGeodetic->XY0().Y();
+
+	    // Do some things with the magnetic field. 
+	    Mx = var[iMx];
+	    My = var[iMy];
+	    Mz = var[iMz];
+	    Working = atan2(My,Mx) * RadToDeg;
+	    while (Working<0.0) Working +=360.0;
+	    while (Working>360.0) Working -= 360.0;
+	    NewVar[NVar+5] = Working;
+	    Working = sqrt(Mx*Mx + My*My + Mz*Mz);
+	    NewVar[NVar+6] = Working;
+	    fProfile->Fill(var[iUTC], Working);
+	    
 	    fNtuple->Fill(NewVar);
 	}
     }
@@ -349,7 +369,7 @@ bool PiDA::OpenOutputFile(const char *Filename)
      * Future.... Add any additional names here. 
      */
     // projection and event count
-    snprintf(tmp, sizeof(tmp), "Count:X:Y:DX:DY");   
+    snprintf(tmp, sizeof(tmp), "Count:X:Y:DX:DY:HDG:ABSMAG");   
     strncat(Names, tmp, sizeof(Names)-strlen(Names));
 
     pLogger->Log("# Names: %s\n", Names);
@@ -362,6 +382,10 @@ bool PiDA::OpenOutputFile(const char *Filename)
     fNtuple = new TNtupleD("PiDA", DataSetName, Names);
 
     pLogger->LogTime("Output file name %s \n", name);
+
+    // Create histograms and profile plots. 
+    fProfile = new TProfile("ABSMAG", "Absolute Magnitude", 
+			    kNTimeBin, 0.0, (double)kSecPerDay, 40.0, 80.0);
 
     SET_DEBUG_STACK;
     return rc;
