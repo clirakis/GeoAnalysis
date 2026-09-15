@@ -24,6 +24,6 @@
 
 #define XXXX_RELEASE "0.1/01"
 #define XXXX_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
-#define MAJOR_VERSION 0
-#define MINOR_VERSION 1
+#define MAJOR_VERSION 1
+#define MINOR_VERSION 0
 #endif

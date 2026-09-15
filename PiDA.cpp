@@ -13,8 +13,7 @@
  *
  * Classification : Unclassified
  *
- * References : lassen-sk8.pdf - Manual
- *              tsip.pdf - main binary interface control document
+ * References : 
  *
  *
  *******************************************************************
@@ -195,15 +194,14 @@ void PiDA::Do(void)
 
     // Create a vector for holding the data. 
     // How many columns are in the dataset? 
-    //size_t NCol = f5InputFile->NVariables();
+    size_t NVar = f5InputFile->NVariables();
     const double *var;
     double Lat, Lon;
     // Make this big. 
-    double NewVar[32];
+    double *NewVar = new double[NVar+5];
 
 
     size_t N    = f5InputFile->NEntries();
-    size_t NVar =  f5InputFile->NVariables();
     cout << "Processing: " << N << " Entries, with " << NVar 
 	 << " Variables" << endl;
 
@@ -218,14 +216,15 @@ void PiDA::Do(void)
 	    Lat = var[f5InputFile->IndexFromName("Lat")];
 	    Lon = var[f5InputFile->IndexFromName("Lon")];
 	    fXY = fGeodetic->ToXY(Lon, Lat, 0.0);
-	    NewVar[NVar]   = fXY.X();
-	    NewVar[NVar+1] = fXY.Y();
-	    NewVar[NVar+2] = fXY.X() - fGeodetic->XY0().X();
-	    NewVar[NVar+3] = fXY.Y() - fGeodetic->XY0().Y();
+	    NewVar[NVar]   = (double) i;
+	    NewVar[NVar+1]   = fXY.X();
+	    NewVar[NVar+2] = fXY.Y();
+	    NewVar[NVar+3] = fXY.X() - fGeodetic->XY0().X();
+	    NewVar[NVar+4] = fXY.Y() - fGeodetic->XY0().Y();
 	    fNtuple->Fill(NewVar);
 	}
     }
-
+    delete []NewVar;
     SET_DEBUG_STACK;
 }
 
@@ -343,20 +342,14 @@ bool PiDA::OpenOutputFile(const char *Filename)
     for (uint32_t i = 0;i< NCol; i++)
     {
 	pName = f5InputFile->NameFromIndex(i);
-	if (i<NCol-1)
-	{
-	    sprintf(tmp,"%s:",pName);
-	    strncat(Names, tmp, sizeof(Names)-strlen(Names));
-	}
-	else
-	{
-	    strncat(Names, pName, sizeof(Names)-strlen(Names));
-	}
+	sprintf(tmp,"%s:",pName);
+	strncat(Names, tmp, sizeof(Names)-strlen(Names));
     }
     /*
      * Future.... Add any additional names here. 
      */
-    snprintf(tmp, sizeof(tmp), ":X:Y:DX:DY");   // projection
+    // projection and event count
+    snprintf(tmp, sizeof(tmp), "Count:X:Y:DX:DY");   
     strncat(Names, tmp, sizeof(Names)-strlen(Names));
 
     pLogger->Log("# Names: %s\n", Names);
